@@ -172,7 +172,7 @@ Son acciones asociadas al estado final del pipeline; no son “pasos del proceso
 
 ## 🤵 Jenkinsfile stages
 
-Ahora continuación vamos a implementar una a una las etapas, siguiendo las indicaciones de los puntos 3 a 9 del enunciado de la práctica. Todo el código generado en adelante debe ir dentro de la sección `stages {}` del `Jenkinsfile`.
+A continuación vamos a implementar una a una las etapas, siguiendo las indicaciones de los puntos 3 a 9 del enunciado de la práctica. Todo el código generado en adelante debe ir dentro de la sección `stages {}` del `Jenkinsfile`.
 
 ### ⚙️ Punto 3. **Auditoría de herramientas**
 ---
@@ -185,11 +185,11 @@ stage('Audit tools') {
     }
 }
 ```
-#### Qué hace
+#### ❓ Qué hace
 
 Comprueba qué versión de Node.js está disponible en el agente de Jenkins.
 
-Por qué se incluye
+#### ❓ Por qué se incluye
 
 El proyecto es Node.js y todo el pipeline depende de que Node esté instalado correctamente. Esta etapa permite dejar evidencia en los logs de Jenkins.
 
@@ -205,18 +205,18 @@ stage('Install dependencies') {
 }
 ```
 
-Qué hace
+#### ❓ Qué hace
 
 Instala las dependencias declaradas en package.json.
 
-Por qué se incluye
+#### ❓ Por qué se incluye
 
 Los comandos posteriores (lint, test, build, etc.) dependen de paquetes instalados localmente, como typescript, vitest, prisma, oxlint, oxfmt y tsdown.
 
 
 ### ⚙️ Etapa adicional. **Generate Prisma client**   
 ---
-No aparece como punto explícito del enunciado, pero es una dependencia técnica necesaria del proyecto que hemos detectado en la fase de validación local (TAREA 2).
+No aparece como punto explícito del enunciado, pero es una dependencia técnica necesaria del proyecto que hemos detectado en la fase de validación local (Task 2).
 
 
 ```groovy
@@ -227,11 +227,11 @@ stage('Generate Prisma client') {
 }
 ```
 
-Qué hace
+#### ❓ Qué hace
 
 Genera el cliente de Prisma necesario para que el código pueda importar ./prisma/client.
 
-Por qué se incluye
+#### ❓ Por qué se incluye
 
 Durante la validación local se comprobó que type-check, test y build fallaban si no se generaba previamente el cliente Prisma.
 
@@ -241,9 +241,20 @@ Durante la validación local se comprobó que type-check, test y build fallaban 
 Incluye una etapa "Format check" que verifique el formato del código usando `npm run format:check`.
 
 ```groovy
-
+stage('Format check') {
+    steps {
+        sh 'npm run format:check'
+    }
+}
 ```
 
+#### ❓ Qué hace
+
+Comprueba que el código cumple el formato definido por el proyecto.
+
+#### ❓ Por qué se incluye
+
+Permite que Jenkins detecte automáticamente problemas de formato antes de continuar con validaciones más avanzadas.
 
 
 ### ⚙️ Punto 6. **Chequeo de calidad de código**
@@ -251,19 +262,40 @@ Incluye una etapa "Format check" que verifique el formato del código usando `np
 Incluye una etapa "Code quality" que verifique la calidad del código usando `npm run lint`.
 
 ```groovy
-
+stage('Code quality') {
+    steps {
+        sh 'npm run lint'
+    }
+}
 ```
 
+#### ❓ Qué hace
 
+Ejecuta el análisis de calidad de código mediante el script lint.
+
+#### ❓ Por qué se incluye
+
+Permite detectar problemas de estilo, posibles errores o malas prácticas definidas por la herramienta de linting del proyecto.
 
 ### ⚙️ Punto 7. **Chequeo de tipos**
 ---
 Implementa una etapa "Type check" que ejecute la comprobación de tipos con `npm run type-check`.
 
 ```groovy
-
+stage('Type check') {
+    steps {
+        sh 'npm run type-check'
+    }
+}
 ```
 
+#### ❓ Qué hace
+
+Ejecuta la comprobación estática de tipos de TypeScript.
+
+#### ❓ Por qué se incluye
+
+Antes de construir o desplegar, conviene comprobar que el código no tiene errores de tipos.
 
 
 ### ⚙️ Punto 8. **Ejecución de tests**
@@ -271,18 +303,49 @@ Implementa una etapa "Type check" que ejecute la comprobación de tipos con `npm
 Implementa una etapa "Tests" que ejecute los tests usando `npm run test`.
 
 ```groovy
-
+stage('Tests') {
+    steps {
+        sh 'npm run test'
+    }
+}
 ```
 
+#### ❓ Qué hace
+
+Ejecuta la batería de tests del proyecto.
+
+#### ❓ Por qué se incluye
+
+Permite validar automáticamente que la aplicación sigue funcionando correctamente antes de generar artefactos.
 
 
 ### ⚙️ Punto 9. **Construcción y archivado**
 ---
-Implementa una etapa "Build" que construya la solución usando `npm run build`.
-Esta etapa deberá de archivar los artefactos del directorio `dist/`. El _fingerprint_ deberá estar activo.
-Verifica que los artefactos son visibles. Deberás de ver dentro del job el archivo `server.mjs`.
+- Implementa una etapa "Build" que construya la solución usando `npm run build`.
+- Esta etapa deberá de archivar los artefactos del directorio `dist/`. El _fingerprint_ deberá estar activo.
+- Verifica que los artefactos son visibles. Deberás de ver dentro del job el archivo `server.mjs`.
 
 ```groovy
-
+stage('Build') {
+    steps {
+        sh 'npm run build'
+        archiveArtifacts artifacts: 'dist/**', fingerprint: true
+    }
+}
 ```
+
+#### ❓ Qué hace
+
+Primero construye la aplicación y después archiva los artefactos generados en dist/.
+
+#### ❓ Por qué se incluye
+
+El enunciado exige compilar la solución y archivar el contenido de dist/ con fingerprint activo. En la validación local se comprobó que el build genera dist/server.mjs.
+
+
+## 🤵 Creación del Jenkinsfile
+
+Con todo el código generado en los dos apartados anteriores creamos el archivo `Jenkinsfile` y lo incluimos en el repositorio.
+
+Actualizamos el repositorio local y lo subimos al remoto
 

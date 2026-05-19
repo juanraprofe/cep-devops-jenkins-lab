@@ -1,4 +1,5 @@
-# Laboratorio Jenkins
+# Laboratorio Jenkins : Automatización CI/CD con Jenkinsfile sobre el proyecto backend
+
 
 # 📋 Task 1. Creación del repositorio
 
@@ -52,7 +53,7 @@
 ---
 
 
-# 📋 Task 2. Validación del proyecto
+# 📋 Task 2. Validación local del proyecto
 
 Antes de empezar a elaborar el `Jenkinsfile` vamos a comprobar que el proyecto funciona correctamente en local. Para ello vamos a ejecutar uno a uno los siguientes comandos:
 
@@ -65,13 +66,32 @@ npm run test
 npm run build
 ```
 
-Todo estará correcto si no falla `npm install` ni ninguno de los `npm run` (porque no existe el script asociado) y si se genera el archivo `dist/server.mjs`.
+Todo estará correcto si no falla ninguno y tras el `build` se genera el archivo `dist/server.mjs`.
 
-CAPTURAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Detectamos que varias etapas críticas (type-check, test y build) fallan debido a la ausencia del cliente generado de `Prisma`. Los errores observados indican la imposibilidad de resolver imports hacia `./prisma/client`, que es utilizado por distintos módulos del backend.
+
+Revisamos el archivo `package.json`, y se identifica la existencia del script:
+
+    npm run prisma:generate
+
+Esto indica que el proyecto requiere una fase previa de generación del cliente `Prisma` antes de ejecutar procesos dependientes de tipos, tests o compilación.
+
+Por ello, se decide incorporar esta operación como una etapa (`stage`) adicional dentro del pipeline CI/CD, aunque el enunciado no la menciona explícitamente, ya que parece claro que es una dependencia necesaria para la correcta ejecución del proyecto.
+
+Para comprobar que no falta ninguna otra dependencia y que el proyecto funciona correctamente ejecutamos el script de `Prisma` y a continuación volvemos a ejecutar los comandos que fallaban.
+
+```bash
+npm run prisma:generate
+npm run type-check
+npm run test
+npm run build
+```
+
+Todas las operaciones se completan sin errores y el `build` genera los archivos previstos
 
 <figure>
-    <img src="capturas/task10-3.png" alt="Despliegue y ejecución de la aplicacion reader/writer" width="60%">
-    <figcaption>Fig. Despliegue y ejecución de la aplicacion reader/writer</figcaption>
+    <img src="capturas/task2-1.png" alt="El 'build' se ejecuta correctamente" width="60%">
+    <figcaption>Fig. El 'build' se ejecuta correctamente</figcaption>
 </figure>
 
 
@@ -80,7 +100,12 @@ CAPTURAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 
 # 📋 Task 3. Elaboración del Jenkinsfile
 
-## 🤵‍♂️ Jenkinsfile base
+## 🤵 Jenkinsfile base
+
+Antes de implementar las etapas (`stages`), vamos a definir la estructura base del `pipeline`. Así nos aseguramos de que la configuración global del `job` está correctamente definida y es conforme con lo que nos pide el enunciado, antes de añadir lógica de ejecución.
+
+Lo que añadimos ahora son todos aquellos elementos que se definen fuera de `stages{}` porque no forman parte del flujo de ejecución principal, sino del ciclo de vida del `pipeline`.
+
 
 ```groovy
 pipeline {
@@ -116,63 +141,148 @@ pipeline {
 ```
 
 
-TEEEEEEEEEEEEEEEEEEEMP
+### ➡️ options {}
 
-Bloque base del Jenkinsfile
+Aquí configuramos las opciones del job que nos pide el punto 1 del enunciado
 
-Se comienza definiendo la estructura base del pipeline antes de implementar las etapas. Esto permite asegurar que la configuración global del job está correctamente definida y alineada con el enunciado antes de añadir lógica de ejecución.
+- Deshabilitar builds concurrentes.
+- Mostrar marcas de tiempo.
+- Timeout de 5 minutos.
 
-Justificación técnica
+Estas opciones afectan al comportamiento global del `pipeline`, por lo que debemos definirlas antes de cualquier `stage`.
 
-Se parte de este bloque porque:
+### ➡️ environment {}
 
-Define el marco de ejecución completo del pipeline (pipeline {}).
-Permite configurar elementos globales y transversales que afectan a todas las etapas.
-Evita introducir errores al mezclar configuración global con lógica de stages.
-Facilita un desarrollo incremental y verificable.
-Correspondencia con el enunciado
-1. Opciones del job → options {}
+Aquí definimos las variables de entorno globales que nos pide el punto 2 del enunciado:
 
-Se configuran:
+- `FORCE_COLOR`: Tendrá el valor numérico `0`.
+- `NO_COLOR`: Tendrá el valor booleano `true`.
 
-ejecución no concurrente
-marcas de tiempo
-timeout
+Deben estar disponibles en todas las etapas (el enunciado nos dice que las *heredarán todas las etapas*) y no dependen de la ejecución de ningún `stage`. Por tanto, como ocurría con `options{}` deben declararse a nivel superior.
 
-Esto afecta al comportamiento global del pipeline, por lo que debe definirse antes de cualquier stage.
+### ➡️ post {}
 
-2. Variables de entorno → environment {}
+Aquí configuramos las etapas finales que nos solicita el punto 10 del enunciado:
 
-Se definen variables globales:
+- Configura que cuando el job finalice exitosamente muestre por pantalla: `'Pipeline completed successfully!'`.
+- Configura que cuando el job finalice con errores muestre por pantalla: `'Pipeline failed. Review logs.'`.
+- Configura que cuando el job finalice, sin importar cómo, siempre limpie el workspace.
 
-disponibles en todas las etapas
-no dependen de la ejecución de ningún stage
+Son acciones asociadas al estado final del pipeline; no son “pasos del proceso”, sino comportamientos posteriores a la ejecución. Por eso esta sección debe ir situada tras las `stages`.
 
-Por tanto, deben declararse a nivel superior.
+## 🤵 Jenkinsfile stages
 
-10. Etapas finales → post {}
+Ahora continuación vamos a implementar una a una las etapas, siguiendo las indicaciones de los puntos 3 a 9 del enunciado de la práctica. Todo el código generado en adelante debe ir dentro de la sección `stages {}` del `Jenkinsfile`.
 
-Se configuran:
+### ⚙️ Punto 3. **Auditoría de herramientas**
+---
+Incluye una etapa "Audit tools" que imprima por pantalla la versión de node con `node --version`.
 
-comportamiento en éxito
-comportamiento en error
-limpieza del workspace
+```groovy
+stage('Audit tools') {
+    steps {
+        sh 'node --version'
+    }
+}
+```
+#### Qué hace
 
-Esto no forma parte del flujo de ejecución principal, sino del ciclo de vida del pipeline, por lo que se define fuera de stages.
+Comprueba qué versión de Node.js está disponible en el agente de Jenkins.
 
-Por qué no se implementan aún las stages
+Por qué se incluye
 
-Las stages (apartados 3 a 9 del enunciado) se implementan después porque:
+El proyecto es Node.js y todo el pipeline depende de que Node esté instalado correctamente. Esta etapa permite dejar evidencia en los logs de Jenkins.
 
-dependen del contexto de ejecución ya definido
-contienen lógica secuencial que es más fácil construir paso a paso
-añadirlas todas de golpe dificulta la validación y el control de errores
-Conclusión
+### ⚙️ Punto 4. **Instalación de dependencias**
+---
+Incluye una etapa "Install dependencies" que instale las dependencias del proyecto con `npm install`.
 
-Este bloque base permite:
+```groovy
+stage('Install dependencies') {
+    steps {
+        sh 'npm install'
+    }
+}
+```
 
-cubrir parcialmente el enunciado desde el inicio
-establecer una estructura correcta
-construir el pipeline de forma incremental, clara y controlada
+Qué hace
 
-===========================
+Instala las dependencias declaradas en package.json.
+
+Por qué se incluye
+
+Los comandos posteriores (lint, test, build, etc.) dependen de paquetes instalados localmente, como typescript, vitest, prisma, oxlint, oxfmt y tsdown.
+
+
+### ⚙️ Etapa adicional. **Generate Prisma client**   
+---
+No aparece como punto explícito del enunciado, pero es una dependencia técnica necesaria del proyecto que hemos detectado en la fase de validación local (TAREA 2).
+
+
+```groovy
+stage('Generate Prisma client') {
+    steps {
+        sh 'npm run prisma:generate'
+    }
+}
+```
+
+Qué hace
+
+Genera el cliente de Prisma necesario para que el código pueda importar ./prisma/client.
+
+Por qué se incluye
+
+Durante la validación local se comprobó que type-check, test y build fallaban si no se generaba previamente el cliente Prisma.
+
+
+### ⚙️ Punto 5. **Chequeo de formato de código**
+---
+Incluye una etapa "Format check" que verifique el formato del código usando `npm run format:check`.
+
+```groovy
+
+```
+
+
+
+### ⚙️ Punto 6. **Chequeo de calidad de código**
+---
+Incluye una etapa "Code quality" que verifique la calidad del código usando `npm run lint`.
+
+```groovy
+
+```
+
+
+
+### ⚙️ Punto 7. **Chequeo de tipos**
+---
+Implementa una etapa "Type check" que ejecute la comprobación de tipos con `npm run type-check`.
+
+```groovy
+
+```
+
+
+
+### ⚙️ Punto 8. **Ejecución de tests**
+---
+Implementa una etapa "Tests" que ejecute los tests usando `npm run test`.
+
+```groovy
+
+```
+
+
+
+### ⚙️ Punto 9. **Construcción y archivado**
+---
+Implementa una etapa "Build" que construya la solución usando `npm run build`.
+Esta etapa deberá de archivar los artefactos del directorio `dist/`. El _fingerprint_ deberá estar activo.
+Verifica que los artefactos son visibles. Deberás de ver dentro del job el archivo `server.mjs`.
+
+```groovy
+
+```
+

@@ -1,19 +1,20 @@
 # Laboratorio Jenkins : Automatización CI/CD con Jenkinsfile sobre el proyecto backend
 
+
 # 📋 Task 1. Creación del repositorio
 
-1.  Como en el nuevo repositorio sólo queremos una parte del original, inicialmente no descargamos el contenido de los archivos (_blobs_), sólo la estructura y el historial mínimo y con `--sparse` indicamos que sólo queremos una parte
+1. Como en el nuevo repositorio sólo queremos una parte del original, inicialmente no descargamos el contenido de los archivos (*blobs*), sólo la estructura y el historial mínimo y con `--sparse` indicamos que sólo queremos una parte
 
         git clone --filter=blob:none --sparse https://github.com/Lemoncode/CEP-Introduccion-Devops
 
-2.  Indicamos que sólo estamos interesados en la carpeta `backend`
+2. Indicamos que sólo estamos interesados en la carpeta `backend`
 
     ```bash
     cd CEP-Introduccion-Devops
     git sparse-checkout set 04-jenkins/backend
     ```
 
-3.  Preparamos la carpeta raíz del nuevo repo y copiamos el contenido de `04-jenkins/backend`
+3. Preparamos la carpeta raíz del nuevo repo y copiamos el contenido de `04-jenkins/backend`
 
     ```bash
     cd ..
@@ -21,7 +22,7 @@
     cp -r CEP-Introduccion-Devops/04-jenkins/backend/* jenkins-lab
     ```
 
-4.  Añadimos el archivo con el enunciado de la práctica, el Diario del Lab (este archivo) y una carpeta para las capturas.
+4. Añadimos el archivo con el enunciado de la práctica, el Diario del Lab (este archivo) y una carpeta para las capturas.
 
     ```bash
     cp CEP-Introduccion-Devops/04-jenkins/enunciado.md jenkins-lab
@@ -29,7 +30,7 @@
     mkdir jenkins-lab/capturas
     ```
 
-5.  Creamos el nuevo repo
+5. Creamos el nuevo repo
 
     ```bash
     cd jenkins-lab
@@ -38,9 +39,9 @@
     git commit -m "Initial commit"
     ```
 
-6.  Creamos un nuevo repositorio público en Github, sin `README.md` para evitar conflictos
+6. Creamos un nuevo repositorio público en Github, sin `README.md` para evitar conflictos
 
-7.  Vinculamos el repo local con el remoto y subimos el contenido
+7. Vinculamos el repo local con el remoto y subimos el contenido
 
     ```bash
     git remote add origin https://github.com/juanraprofe/cep-devops-jenkins-lab.git
@@ -48,7 +49,9 @@
     git push -u origin main
     ```
 
+
 ---
+
 
 # 📋 Task 2. Validación local del proyecto
 
@@ -91,7 +94,9 @@ Todas las operaciones se completan sin errores y el `build` genera los archivos 
     <figcaption>Fig. El 'build' se ejecuta correctamente</figcaption>
 </figure>
 
+
 ---
+
 
 # 📋 Task 3. Elaboración del Jenkinsfile
 
@@ -100,6 +105,7 @@ Todas las operaciones se completan sin errores y el `build` genera los archivos 
 Antes de implementar las etapas (`stages`), vamos a definir la estructura base del `pipeline`. Así nos aseguramos de que la configuración global del `job` está correctamente definida y es conforme con lo que nos pide el enunciado, antes de añadir lógica de ejecución.
 
 Lo que añadimos ahora son todos aquellos elementos que se definen fuera de `stages{}` porque no forman parte del flujo de ejecución principal, sino del ciclo de vida del `pipeline`.
+
 
 ```groovy
 pipeline {
@@ -134,6 +140,7 @@ pipeline {
 }
 ```
 
+
 ### ➡️ options {}
 
 Aquí configuramos las opciones del job que nos pide el punto 1 del enunciado
@@ -151,7 +158,7 @@ Aquí definimos las variables de entorno globales que nos pide el punto 2 del en
 - `FORCE_COLOR`: Tendrá el valor numérico `0`.
 - `NO_COLOR`: Tendrá el valor booleano `true`.
 
-Deben estar disponibles en todas las etapas (el enunciado nos dice que las _heredarán todas las etapas_) y no dependen de la ejecución de ningún `stage`. Por tanto, como ocurría con `options{}` deben declararse a nivel superior.
+Deben estar disponibles en todas las etapas (el enunciado nos dice que las *heredarán todas las etapas*) y no dependen de la ejecución de ningún `stage`. Por tanto, como ocurría con `options{}` deben declararse a nivel superior.
 
 ### ➡️ post {}
 
@@ -168,9 +175,7 @@ Son acciones asociadas al estado final del pipeline; no son “pasos del proceso
 A continuación vamos a implementar una a una las etapas, siguiendo las indicaciones de los puntos 3 a 9 del enunciado de la práctica. Todo el código generado en adelante debe ir dentro de la sección `stages {}` del `Jenkinsfile`.
 
 ### ⚙️ Punto 3. **Auditoría de herramientas**
-
 ---
-
 Incluye una etapa "Audit tools" que imprima por pantalla la versión de node con `node --version`.
 
 ```groovy
@@ -180,7 +185,6 @@ stage('Audit tools') {
     }
 }
 ```
-
 #### ❓ Qué hace
 
 Comprueba qué versión de Node.js está disponible en el agente de Jenkins.
@@ -190,9 +194,7 @@ Comprueba qué versión de Node.js está disponible en el agente de Jenkins.
 El proyecto es Node.js y todo el pipeline depende de que Node esté instalado correctamente. Esta etapa permite dejar evidencia en los logs de Jenkins.
 
 ### ⚙️ Punto 4. **Instalación de dependencias**
-
 ---
-
 Incluye una etapa "Install dependencies" que instale las dependencias del proyecto con `npm install`.
 
 ```groovy
@@ -211,11 +213,11 @@ Instala las dependencias declaradas en package.json.
 
 Los comandos posteriores (lint, test, build, etc.) dependen de paquetes instalados localmente, como typescript, vitest, prisma, oxlint, oxfmt y tsdown.
 
-### ⚙️ Etapa adicional. **Generate Prisma client**
 
+### ⚙️ Etapa adicional. **Generate Prisma client**   
 ---
-
 No aparece como punto explícito del enunciado, pero es una dependencia técnica necesaria del proyecto que hemos detectado en la fase de validación local (Task 2).
+
 
 ```groovy
 stage('Generate Prisma client') {
@@ -233,10 +235,9 @@ Genera el cliente de Prisma necesario para que el código pueda importar ./prism
 
 Durante la validación local se comprobó que type-check, test y build fallaban si no se generaba previamente el cliente Prisma.
 
+
 ### ⚙️ Punto 5. **Chequeo de formato de código**
-
 ---
-
 Incluye una etapa "Format check" que verifique el formato del código usando `npm run format:check`.
 
 ```groovy
@@ -255,10 +256,9 @@ Comprueba que el código cumple el formato definido por el proyecto.
 
 Permite que Jenkins detecte automáticamente problemas de formato antes de continuar con validaciones más avanzadas.
 
+
 ### ⚙️ Punto 6. **Chequeo de calidad de código**
-
 ---
-
 Incluye una etapa "Code quality" que verifique la calidad del código usando `npm run lint`.
 
 ```groovy
@@ -278,9 +278,7 @@ Ejecuta el análisis de calidad de código mediante el script lint.
 Permite detectar problemas de estilo, posibles errores o malas prácticas definidas por la herramienta de linting del proyecto.
 
 ### ⚙️ Punto 7. **Chequeo de tipos**
-
 ---
-
 Implementa una etapa "Type check" que ejecute la comprobación de tipos con `npm run type-check`.
 
 ```groovy
@@ -299,10 +297,9 @@ Ejecuta la comprobación estática de tipos de TypeScript.
 
 Antes de construir o desplegar, conviene comprobar que el código no tiene errores de tipos.
 
+
 ### ⚙️ Punto 8. **Ejecución de tests**
-
 ---
-
 Implementa una etapa "Tests" que ejecute los tests usando `npm run test`.
 
 ```groovy
@@ -321,10 +318,9 @@ Ejecuta la batería de tests del proyecto.
 
 Permite validar automáticamente que la aplicación sigue funcionando correctamente antes de generar artefactos.
 
+
 ### ⚙️ Punto 9. **Construcción y archivado**
-
 ---
-
 - Implementa una etapa "Build" que construya la solución usando `npm run build`.
 - Esta etapa deberá de archivar los artefactos del directorio `dist/`. El _fingerprint_ deberá estar activo.
 - Verifica que los artefactos son visibles. Deberás de ver dentro del job el archivo `server.mjs`.
@@ -346,6 +342,7 @@ Primero construye la aplicación y después archiva los artefactos generados en 
 
 El enunciado exige compilar la solución y archivar el contenido de dist/ con fingerprint activo. En la validación local se comprobó que el build genera dist/server.mjs.
 
+
 ## 🤵 Creación del Jenkinsfile
 
 Con todo el código generado en los dos apartados anteriores creamos el archivo `Jenkinsfile` y lo incluimos en el repositorio.
@@ -353,6 +350,7 @@ Con todo el código generado en los dos apartados anteriores creamos el archivo 
 Actualizamos el repositorio local y lo subimos al remoto
 
 ---
+
 
 # 📋 Task 4. Depliegue de la app
 
@@ -369,11 +367,11 @@ Donde nos pedirá, para desbloquear el acceso a la aplicación, una clave que ap
     <figcaption>Fig. Pantalla de inicio de Jenkins</figcaption>
 </figure>
 
-Una vez instalados los plugins accedemos a la aplicación y creamos un `Nuevo item` para lo cual tenemos que darle nombre y elegimos el tipo `Multibranch pipeline`.
+Una vez instalados los plugins accedemos a la aplicación y creamos un `Nuevo item` para lo cual tenemos que darle nombre y elegimos el tipo `Multibranch pipeline`. 
 
 A continuación configuramos el `item` indicándole la url del repositorio donde se encuentra nuestro `Jenkinsfile`. Conectaremos por HTTPS.
 
-Existe la posibilidad de bloqueo en GitHub por exceso de peticiones anónimas al repositorio desde el servidor de Jenkins, por lo que vamos a generarnos un token
+Existe la posibilidad de bloqueo en GitHub por exceso de peticiones anónimas al repositorio desde el servidor de Jenkins, por lo que vamos a generarnos un token 
 
 Para ello pinchamos en el avatar de nuestro perfil y ahí
 
@@ -381,15 +379,74 @@ Para ello pinchamos en el avatar de nuestro perfil y ahí
 
 Damos un nombre al token, seleccionamos su período de validez, seleccionamos a qué repos le damos permisos de acceso (elegimos sólo el repo del laboratorio de jenkins) y, por último, seleccionamos qué permisos asignamos al token:
 
-- `Contents` en modo RO, para tener acceso al contenido
+- `Contents` en modo RO, para tener acceso al contenido 
 - `Commits statuses` en modo RW, para que pueda crear commits
 
-De vuelta a Jenkins, añadimos una credencial de tipo usuario/contraseña, en la que
+De vuelta a Jenkins, añadimos una credencial de tipo usuario/contraseña, en la que 
 
 - username = nuestro usuario GitHub
 - password = token generado
 
+
 <figure>
-    <img src="capturas/task4-1.png" alt="El item de Jenkins configurado" width="60%">
+    <img src="capturas/task4-2.png" alt="El item de Jenkins configurado" width="60%">
     <figcaption>Fig. El item de Jenkins configurado</figcaption>
 </figure>
+
+Una vez configurado lanzamos el `pipeline`
+
+<figure>
+    <img src="capturas/task4-3.png" alt="El primer build está en curso" width="60%">
+    <figcaption>Fig. El primer build está en curso</figcaption>
+</figure>
+
+
+La primera ejecución del `build` no se completó porque la etapa de instalación de dependencias con `npm install` superó el timeout de 5 minutos que aparece en las opciones del `Jenkinfile`. Inicialmente se pensó que podría ser un problema de espacio en disco ya que el `Built-in node` tenía el mensaje
+
+    Disk space is below threshold of 1.00 GiB. Only 1016.29 MiB out of 7.65 GiB left on /var/jenkins_home.
+    
+Por lo que tras liberar casi 3 GB de disco, se lanza de nuevo el proceso. Sin embargo volvió a suceder lo mismo. Todo parece indicar que es un problema de recursos insuficientes en el host, ya que la fase `npm install` satura el entorno Jenkins/Docker, hasta el punto de bloquear la aplicación en el navegador y bloquear el acceso a la máquina por la consola SSH del host. El bloqueo se mantiene hasta que se reinicia la instancia desde el panel de AWS.
+
+Revisando la memoria de la instancia vemos que sólo tiene 1GB de RAM y que la SWAP es de 0B
+
+<figure>
+    <img src="capturas/task4-4.png" alt="Memoria disponible en el  host" width="60%">
+    <figcaption>Fig. Memoria disponible en el  host</figcaption>
+</figure>
+
+
+Probamos a crear una swap para ver si así solucionamos el problema
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+free -h
+```
+
+Ejecutamos de nuevo el `build` y en esta ocasión la instalación de dependencias finalizó correctamente. La ejecución avanzó hasta la etapa `Format check`, donde Jenkins detectó un problema de formato en un archivo. Esto confirma que el pipeline está ejecutando correctamente las validaciones definidas y bloquea el flujo ante incumplimientos de formato.
+
+Corregimos los errores de formato en local 
+
+```bash
+npm run format:write
+npm run format:check
+```
+
+Y actualizamos el repositorio remoto
+
+```bash
+git add .
+git commit -m "Corrección del formato"
+git push
+```
+
+Ejecutamos el `build` de nuevo y esta vez finaliza sin errores
+
+<figure>
+    <img src="capturas/task4-5.png" alt="Pipeline finalizada con éxito" width="60%">
+    <figcaption>Fig. Pipeline finalizada con éxito</figcaption>
+</figure>
+
+---
